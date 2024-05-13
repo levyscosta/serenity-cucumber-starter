@@ -1,4 +1,6 @@
-defaultTasks 'clean', 'test', 'aggregate'
+apply plugin: 'java'
+apply plugin: "net.serenity-bdd.serenity-gradle-plugin"
+
 
 repositories {
     mavenCentral()
@@ -7,23 +9,23 @@ repositories {
 
 buildscript {
     repositories {
+    mavenCentral()
+    mavenLocal()
         maven {
             url "https://plugins.gradle.org/m2/"
         }
     }
     dependencies {
         classpath "net.serenity-bdd:serenity-gradle-plugin:4.0.15"
+        classpath "net.serenity-bdd:serenity-single-page-report:4.0.15"
     }
 }
 
 
-apply plugin: 'java'
-apply plugin: 'eclipse'
-apply plugin: 'idea'
-apply plugin: "net.serenity-bdd.serenity-gradle-plugin"
 
-sourceCompatibility = 16
-targetCompatibility = 16
+
+//sourceCompatibility = 16
+//targetCompatibility = 16
 
 ext {
     serenity_version = '4.0.15'
@@ -57,6 +59,34 @@ test {
     useJUnitPlatform()
 }
 
+configurations {
+    cucumberRuntime{
+        extendsFrom testImplementation
+    }
+}
+
+task cucumberCli(){
+    dependsOn assemble, testClasses
+    doLast{
+        javaexec{
+            main = "io.cucumber.core.cli.Main"
+            classpath = configurations.cucumberRuntime + sourceSets.main.output + sourceSets.test.output
+            args = [
+                '--plugin', 'pretty',
+                '--plugin', "html:target/cucumber.report.html",
+                '--glue', 'starter'
+            ]
+        }
+
+    }
+}
+
 gradle.startParameter.continueOnFailure = true
+
+tasks.named('aggregate').configure {
+    outputs.dir("target/site/serenity")
+    // Configurações adicionais conforme necessário
+
+}
 
 test.finalizedBy(aggregate)
